@@ -1,0 +1,39 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 700px;
+    background: #fff;
+    padding: 40px;
+    margin: 50px auto;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #333;
+  }
+  input[type="file"] {
+    margin: 20px 0;
+  }
+  button, .button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 24px;
+    border: none;
+    text-decoration: none;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  textarea {
+    width: 100%;
+    margin-top: 20px;
+  }
+  .uploaded-img {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+  }
+  

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Medicine Info Extractor</title>
+</head>
+<body>
+    <h2>Upload Medicine Image</h2>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit">Upload</button>
+    </form>
+    <hr>
+    <h3>Extracted Info:</h3>
+    <div id="output">
+        {{ extracted_text|safe }}
+    </div>
+</body>
+</html>
