@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Medicine Image</title>
+</head>
+<body>
+
+  <h2>Upload Medicine Image</h2>
+
+  <form id="uploadForm">
+    <label for="fileUpload">Choose an image:</label>
+    <input type="file" id="fileUpload" name="file" accept="image/*" required>
+    <button type="submit">Upload</button>
+  </form>
+
+  <h3>Result:</h3>
+  <pre id="result"></pre>
+
+  <!-- Button for translating the result -->
+  <button id="translateButton" style="display: none;">Translate to Hindi</button>
+
+  <h3>Translation:</h3>
+  <pre id="translatedResult"></pre>
+
+  <script>
+    // Variable to store extracted medicine details
+    let medicineDetails = null;
+
+    // Handle form submission to upload image
+    document.getElementById("uploadForm").addEventListener("submit", function(event) {
+      event.preventDefault(); // Prevent page reload
+
+      let formData = new FormData();
+      let fileInput = document.getElementById("fileUpload");
+
+      if (fileInput.files.length === 0) {
+        alert("Please select a file.");
+        return;
+      }
+
+      formData.append("file", fileInput.files[0]);
+
+      fetch("/upload", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log("Response:", data);
+        document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+
+        // If medicine details are returned, store them and show the translate button
+        if (data && data.medicine_details) {
+          medicineDetails = data.medicine_details;
+          document.getElementById("translateButton").style.display = "block";
+        } else {
+          document.getElementById("translateButton").style.display = "none";
+        }
+      })
+      .catch(error => console.error("Error:", error));
+    });
+
+    // Handle click on Translate to Hindi button
+    document.getElementById("translateButton").addEventListener("click", function() {
+      if (medicineDetails) {
+        fetch("/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ "medicine_details": medicineDetails })
+        })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById("translatedResult").textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(error => console.error("Translation Error:", error));
+      }
+    });
+  </script>
+
+</body>
+</html>
