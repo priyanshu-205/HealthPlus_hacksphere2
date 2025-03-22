@@ -1,0 +1,84 @@
+{
+    "medicines": [
+        {
+            "image": "Paracetamol.jpg",
+            "name": "Paracetamol",
+            "description": "An analgesic and antipyretic medication used to relieve pain and reduce fever.",
+            "uses": [
+                "Pain relief",
+                "Fever reduction",
+                "Headache and muscle pain treatment"
+            ],
+            "dosage": {
+                "amount": "500mg",
+                "frequency": "Up to 4 times a day",
+                "maximum_daily_dose": "2000mg"
+            },
+            "expiry_date": "Best Before 3 yrs of packaging",
+            "manufacturer": "ABC Pharma",
+            "side_effects": [
+                "Nausea",
+                "Liver damage (if overdosed)",
+                "Allergic reactions (rare)"
+            ],
+            "precautions": [
+                "Avoid alcohol consumption while taking this medicine",
+                "Do not exceed the recommended dosage",
+                "Consult a doctor if symptoms persist beyond 3 days"
+            ]
+        },
+        {
+            "image": "Aspirin.jpg",
+            "name": "Aspirin",
+            "description": "It helps to stop the production of certain natural substances that cause fever and swelling.",
+            "uses": [
+                "Helps to relieve fever",
+                "Decreases pain"
+            ],
+            "dosage": {
+                "amount": "300mg",
+                "frequency": "Before bed or as prescribed"
+            },
+            "expiry_date": "Best Before 1 yr of packaging",
+            "manufacturer": "XYZ Pharmaceuticals",
+            "side_effects": [
+                "Diarrhea",
+                "Abdominal cramps",
+                "Bloating"
+            ],
+            "precautions": [
+                "Do not use for prolonged periods without medical advice",
+                "Drink plenty of water for better effectiveness",
+                "Consult a doctor if symptoms persist"
+            ]
+        },
+        {
+            "image": "METFORMIN.jpg",
+            "name": "METFORMIN",
+            "description": "A drug which is used to treat type 2 dibetese and gestational dibetese.",
+            "uses": [
+                "Treatment of high sugar level (Dibetese type 2)"
+                
+            ],
+            "dosage": {
+                "amount": "500mg",
+                "frequency": "Once daily",
+                "maximum_daily_dose": "850mg (under medical supervision)"
+            },
+            "expiry_date": "Best Before 3 yrs of packaging",
+            "manufacturer": "PQR Healthcare",
+            "side_effects": [
+                "Dizziness",
+                "Low blood pressure",
+                "Fatigue",
+                "Increased potassium levels (rare)"
+            ],
+            "precautions": [
+                "Avoid potassium-rich foods if advised by a doctor",
+                "Do not stop medication suddenly without consulting a doctor",
+                "Monitor blood pressure regularly"
+            ]
+        }
+    ]
+}
+

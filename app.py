@@ -1,95 +1,90 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template, request, jsonify
+import json
 import pytesseract
 from PIL import Image
 import os
-import re
-import spacy
-import cv2
-import numpy as np
+from werkzeug.utils import secure_filename
+import difflib  # For fuzzy matching
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load spaCy model (prefer medical model if available)
-try:
-    nlp = spacy.load("en_core_sci_md")  # Best accuracy for medicine
-except:
-    try:
-        nlp = spacy.load("en_core_sci_sm")  # Smaller fallback
-    except:
-        nlp = spacy.load("en_core_web_sm")  # Generic fallback
+# Load medicine data from JSON
+def load_json():
+    with open("data.json", "r") as file:
+        return json.load(file)
 
-# Optional: Blacklist common noisy words
-blacklist = {
-    "store", "keep", "avoid", "facts", "for", "shake", "active",
-    "inc", "consult", "information", "warnings", "ingredients",
-    "reorder", "leaf", "fast", "will", "safetec", "usp", "drug", "america"
-}
+# Check if uploaded file is allowed
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Preprocess image to improve OCR accuracy
-def preprocess_image_for_ocr(image_path):
-    img = cv2.imread(image_path)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (3, 3), 0)
-    thresh = cv2.adaptiveThreshold(blur, 255,
-                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY, 11, 2)
-    processed_path = image_path.replace('.png', '_processed.png')
-    cv2.imwrite(processed_path, thresh)
-    return processed_path
+# Extract text from image using OCR
+def extract_text_from_image(image_path):
+    image = Image.open(image_path)
+    extracted_text = pytesseract.image_to_string(image)
+    print("Extracted Text:", extracted_text)  # For debugging
+    return extracted_text.strip().lower()
 
-# Extract medicine-related information from OCR text
-def extract_medicine_info(ocr_text):
-    # Regex-based name and dosage extraction
-    names = re.findall(r'\b[A-Z][A-Za-z]{2,}\b', ocr_text)
-    names = [n for n in names if n.lower() not in blacklist and len(n) > 2]
+# Fuzzy matching function to find best matching medicine name
+def find_best_match(extracted_text, medicines):
+    medicine_names = [med["name"].strip().lower() for med in medicines]
+    matches = difflib.get_close_matches(extracted_text, medicine_names, n=1, cutoff=0.5)
+    return matches[0] if matches else None
 
-    dosage = re.findall(r'\b\d{1,4}\s?(mg|ml|g|mcg|MG|ML|IU|G|Mcg)\b', ocr_text)
-    expiry = re.findall(r'(EXP|Exp|exp|Expiry|EXPIRY)[:\s]*([0-9]{2}/[0-9]{2,4})', ocr_text)
+# Home route
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-    # NLP-based entity extraction (medical-focused labels)
-    doc = nlp(ocr_text)
-    usage = [ent.text.strip() for ent in doc.ents if ent.label_ in [
-        'PRODUCT', 'CHEMICAL', 'DRUG', 'GENE_OR_GENE_PRODUCT', 'ORG', 'GPE']]
-    usage = [u for u in usage if u.lower() not in blacklist and len(u) > 2]
+# Upload and process image
+@app.route("/upload", methods=["POST"])
+def upload_image():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
 
-    return {
-        "medicine_names": sorted(set(names + usage)),
-        "dosage": sorted(set(dosage)),
-        "expiry_dates": [f'{e[0]}: {e[1]}' for e in expiry],
-        "usage_info": sorted(set(usage))
-    }
-
-@app.route('/')
-def index():
-    return render_template('upload.html')
-
-@app.route('/api/extract', methods=['POST'])
-def extract():
-    if 'image' not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
-
-    file = request.files['image']
+    file = request.files['file']
     if file.filename == '':
-        return jsonify({"error": "No image selected"}), 400
+        return jsonify({"error": "No selected file"}), 400
 
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-    file.save(filepath)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
 
-    # Preprocess and run OCR
-    processed_path = preprocess_image_for_ocr(filepath)
-    ocr_text = pytesseract.image_to_string(Image.open(processed_path), config='--oem 3 --psm 6')
+        # Extract text and match medicine
+        extracted_text = extract_text_from_image(filepath)
+        print("text",extracted_text)
+        medicines = load_json()["medicines"]
+        print("medicines",medicines)
 
-    # Extract structured medicine information
-    extracted_data = extract_medicine_info(ocr_text)
+        # First try direct substring match
+        for medicine in medicines:
+            if medicine["name"].strip().lower() in extracted_text:
+                return jsonify(medicine)
 
-    return jsonify({
-        "ocr_text": ocr_text,
-        "medicine_details": extracted_data
-    })
+        # If no exact match, try fuzzy matching
+        best_match_name = find_best_match(extracted_text, medicines)
+        if best_match_name:
+            matched_medicine = next(med for med in medicines if med["name"].strip().lower() == best_match_name)
+            return jsonify(matched_medicine)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+        return jsonify({"error": "Medicine not found"}), 404
+
+# Display medicine information (if using HTML templates)
+@app.route("/medicine/<medicine_name>")
+def show_medicine(medicine_name):
+    medicines = load_json()["medicines"]
+    for medicine in medicines:
+        if medicine["name"].strip().lower() == medicine_name:
+            return render_template("medicine.html", medicine=medicine)
+    return "Medicine not found", 404
+
+if __name__ == "__main__":
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+    app.run(debug=True)
+
