@@ -1,83 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Upload Medicine Image</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    /* Basic Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    label {
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    input[type="file"] {
+      margin-bottom: 15px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    #translateButton, #speakButton {
+      display: none;
+    }
+    .result-section {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h2>Upload Medicine Image</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <label for="fileUpload">Choose an image:</label>
+      <input type="file" id="fileUpload" name="file" accept="image/*" required />
+      <button type="submit">Upload</button>
+    </form>
 
-  <h2>Upload Medicine Image</h2>
+    <div class="result-section">
+      <h3>Result (English):</h3>
+      <pre id="result"></pre>
+    </div>
 
-  <form id="uploadForm">
-    <label for="fileUpload">Choose an image:</label>
-    <input type="file" id="fileUpload" name="file" accept="image/*" required>
-    <button type="submit">Upload</button>
-  </form>
+    <!-- Button for translating the result -->
+    <div class="result-section">
+      <button id="translateButton">Translate to Hindi</button>
+    </div>
 
-  <h3>Result:</h3>
-  <pre id="result"></pre>
+    <div class="result-section">
+      <h3>Translation (Hindi):</h3>
+      <pre id="translatedResult"></pre>
+    </div>
 
-  <!-- Button for translating the result -->
-  <button id="translateButton" style="display: none;">Translate to Hindi</button>
-
-  <h3>Translation:</h3>
-  <pre id="translatedResult"></pre>
+    <!-- Button for voice playback -->
+    <div class="result-section">
+      <button id="speakButton">Speak Hindi Translation</button>
+    </div>
+  </div>
 
   <script>
-    // Variable to store extracted medicine details
+    // Variable to store extracted medicine details and translated text
     let medicineDetails = null;
+    let translatedText = "";
 
     // Handle form submission to upload image
-    document.getElementById("uploadForm").addEventListener("submit", function(event) {
+    $("#uploadForm").on("submit", function (event) {
       event.preventDefault(); // Prevent page reload
+      let formData = new FormData(this);
+      $("#result").text("Processing...");
+      $("#translateButton").hide();
+      $("#translatedResult").text("");
+      $("#speakButton").hide();
 
-      let formData = new FormData();
-      let fileInput = document.getElementById("fileUpload");
+      $.ajax({
+        url: "/upload",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+          console.log("Response:", response);
+          $("#result").text(JSON.stringify(response, null, 2));
 
-      if (fileInput.files.length === 0) {
-        alert("Please select a file.");
-        return;
-      }
-
-      formData.append("file", fileInput.files[0]);
-
-      fetch("/upload", {
-        method: "POST",
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log("Response:", data);
-        document.getElementById("result").textContent = JSON.stringify(data, null, 2);
-
-        // If medicine details are returned, store them and show the translate button
-        if (data && data.medicine_details) {
-          medicineDetails = data.medicine_details;
-          document.getElementById("translateButton").style.display = "block";
-        } else {
-          document.getElementById("translateButton").style.display = "none";
+          // If medicine details are returned, store them and show the translate button
+          if (response && response.medicine_details) {
+            medicineDetails = response.medicine_details;
+            $("#translateButton").show();
+          }
+        },
+        error: function (xhr, status, error) {
+          $("#result").text("Error: " + xhr.responseText);
         }
-      })
-      .catch(error => console.error("Error:", error));
+      });
     });
 
     // Handle click on Translate to Hindi button
-    document.getElementById("translateButton").addEventListener("click", function() {
+    $("#translateButton").on("click", function () {
       if (medicineDetails) {
-        fetch("/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ "medicine_details": medicineDetails })
-        })
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById("translatedResult").textContent = JSON.stringify(data, null, 2);
-        })
-        .catch(error => console.error("Translation Error:", error));
+        $.ajax({
+          url: "/translate",
+          type: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({ medicine_details: medicineDetails }),
+          success: function (response) {
+            $("#translatedResult").text(JSON.stringify(response, null, 2));
+            // Store translation for voice synthesis
+            translatedText = JSON.stringify(response, null, 2);
+            $("#speakButton").show();
+          },
+          error: function (xhr, status, error) {
+            $("#translatedResult").text("Translation Error: " + xhr.responseText);
+          }
+        });
+      }
+    });
+
+    // Handle click on Speak button using Web Speech API
+    $("#speakButton").on("click", function () {
+      if (translatedText !== "") {
+        let utterance = new SpeechSynthesisUtterance(translatedText);
+        utterance.lang = "hi-IN"; // Set language to Hindi
+        speechSynthesis.speak(utterance);
       }
     });
   </script>
-
 </body>
 </html>
+
